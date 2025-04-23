@@ -154,10 +154,13 @@ def main():
     )
     parser.add_argument(
         "--output_file",
-        default="expert_knowledge_results.json",
+        default="artifacts/expert_knowledge_results.json",
         help="Output JSON file path",
     )
     args = parser.parse_args()
+
+    # Create artifacts directory if it doesn't exist
+    os.makedirs("artifacts", exist_ok=True)
 
     vcf_files = glob.glob(os.path.join(args.input_dir, "*.vcf"))
 

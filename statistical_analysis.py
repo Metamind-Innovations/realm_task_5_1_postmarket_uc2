@@ -402,18 +402,19 @@ def main():
     )
     args = parser.parse_args()
 
-    # Find all VCF files in the input directory
+    # Create artifacts directory if it doesn't exist
+    os.makedirs("artifacts", exist_ok=True)
+
     vcf_files = glob.glob(os.path.join(args.input_dir, "*.vcf"))
 
     if not vcf_files:
         results = {"error": f"No VCF files found in {args.input_dir}"}
-        with open("statistical_analysis.json", "w") as f:
+        with open("artifacts/statistical_analysis.json", "w") as f:
             json.dump(results, f, indent=4)
         return
 
     all_results = {"total_files": len(vcf_files), "files": {}}
 
-    # Process each VCF file
     for vcf_file in vcf_files:
         file_name = os.path.basename(vcf_file)
         all_results["files"][file_name] = {
@@ -422,8 +423,7 @@ def main():
             "data_type_consistency": data_type_consistency(vcf_file),
         }
 
-    # Save results to JSON file
-    with open("statistical_analysis.json", "w") as f:
+    with open("artifacts/statistical_analysis.json", "w") as f:
         json.dump(all_results, f, indent=4)
 
 
