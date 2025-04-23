@@ -2,4 +2,4 @@
 data/
 Software/
 *.json
-results/
+artifacts/
