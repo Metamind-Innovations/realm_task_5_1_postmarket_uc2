@@ -196,3 +196,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# TODO: Format output so that it includes info about the criterion used as well as a source for it.
+# TODO: Make output a json file.
