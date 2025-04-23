@@ -164,7 +164,19 @@ def main():
     if not vcf_files:
         results = {"error": f"No VCF files found in {args.input_dir}"}
     else:
-        results = {"files": {}}
+        results = {
+            "criteria": {
+                "nucleotides": {
+                    "description": "Based on Hirao et. al. (https://pubs.acs.org/doi/abs/10.1021/ar200257x) allele bases can be A, C, G, T (+ N which is used for undefined bases).",
+                    "valid_bases": ["A", "C", "G", "T", "N"]
+                },
+                "positions": {
+                    "description": "For each chromosome, the position of the of the variant should be smaller than the chromosome's total length (https://www.ncbi.nlm.nih.gov/datasets/genome/GCF_000001405.39/).",
+                    "source": "NCBI GRCh38 Assembly"
+                }
+            },
+            "files": {}
+        }
         for vcf_file in vcf_files:
             file_results = {
                 "position_validation": report_invalid_positions(vcf_file),
