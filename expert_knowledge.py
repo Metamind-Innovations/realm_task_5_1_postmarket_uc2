@@ -1,5 +1,6 @@
 import argparse
 import glob
+import json
 import os
 
 
@@ -13,21 +14,15 @@ def validate_vcf_positions(vcf_file_path):
     Returns:
         list: List of tuples containing (chrom, pos, max_length) for invalid positions
     """
-    # Dictionary to store chromosome lengths from the header
     chrom_lengths = {}
-
-    # List to store invalid positions
     invalid_positions = []
 
     with open(vcf_file_path, "r") as vcf_file:
-        # Parse header to extract chromosome lengths
         for line in vcf_file:
             line = line.strip()
 
-            # Extract chromosome lengths from contig lines in the header
             if line.startswith("##contig=<ID="):
-                # Parse the contig line to extract chromosome ID and length
-                contig_info = line[10:-1]  # Remove '##contig=<' and '>'
+                contig_info = line[10:-1]
                 parts = contig_info.split(",")
 
                 chrom_id = None
@@ -42,23 +37,20 @@ def validate_vcf_positions(vcf_file_path):
                 if chrom_id and length:
                     chrom_lengths[chrom_id] = length
 
-            # Start processing variant lines after the header
             elif line.startswith("#CHROM"):
                 break
 
-        # Process variant lines
         for line in vcf_file:
             if line.startswith("#"):
                 continue
 
             fields = line.strip().split("\t")
-            if len(fields) < 5:  # Ensure we have at least CHROM and POS fields
+            if len(fields) < 5:
                 continue
 
             chrom = fields[0]
             try:
                 pos = int(fields[1])
-                # Check if position is valid
                 if chrom in chrom_lengths and pos > chrom_lengths[chrom]:
                     invalid_positions.append((chrom, pos, chrom_lengths[chrom]))
             except ValueError:
@@ -75,18 +67,17 @@ def report_invalid_positions(vcf_file_path):
         vcf_file_path (str): Path to the VCF file to validate
 
     Returns:
-        bool: True if all positions are valid, False otherwise
+        dict: Results dictionary containing validation status and any invalid positions
     """
     invalid_positions = validate_vcf_positions(vcf_file_path)
-
-    if not invalid_positions:
-        print(f"All positions in {vcf_file_path} are valid.")
-        return True
-    else:
-        print(f"Found {len(invalid_positions)} invalid positions in {vcf_file_path}:")
-        for chrom, pos, max_length in invalid_positions:
-            print(f"  {chrom}:{pos} exceeds maximum length of {max_length}")
-        return False
+    results = {
+        "is_valid": len(invalid_positions) == 0,
+        "invalid_positions": [
+            {"chromosome": chrom, "position": pos, "max_length": max_length}
+            for chrom, pos, max_length in invalid_positions
+        ],
+    }
+    return results
 
 
 def validate_nucleotides(vcf_file_path):
@@ -99,29 +90,23 @@ def validate_nucleotides(vcf_file_path):
     Returns:
         list: List of tuples containing (chrom, pos, field, value) for invalid nucleotide sequences
     """
-    # Valid nucleotide characters
     valid_nucleotides = set("ACGTN")
 
-    # List to store invalid nucleotide sequences
     invalid_sequences = []
 
     with open(vcf_file_path, "r") as vcf_file:
-        # Skip header lines
         for line in vcf_file:
             if line.startswith("#CHROM"):
                 break
             elif line.startswith("#"):
                 continue
 
-        # Process variant lines
         for line in vcf_file:
             if line.startswith("#"):
                 continue
 
             fields = line.strip().split("\t")
-            if (
-                len(fields) < 5
-            ):  # Ensure we have at least CHROM, POS, ID, REF, ALT fields
+            if len(fields) < 5:
                 continue
 
             chrom = fields[0]
@@ -129,11 +114,9 @@ def validate_nucleotides(vcf_file_path):
             ref = fields[3]
             alt_field = fields[4]
 
-            # Check REF field
             if not all(nucleotide in valid_nucleotides for nucleotide in ref.upper()):
                 invalid_sequences.append((chrom, pos, "REF", ref))
 
-            # Check each ALT allele (comma-separated)
             for alt in alt_field.split(","):
                 if not all(
                     nucleotide in valid_nucleotides for nucleotide in alt.upper()
@@ -151,20 +134,17 @@ def report_invalid_nucleotides(vcf_file_path):
         vcf_file_path (str): Path to the VCF file to validate
 
     Returns:
-        bool: True if all nucleotide sequences are valid, False otherwise
+        dict: Results dictionary containing validation status and any invalid sequences
     """
     invalid_sequences = validate_nucleotides(vcf_file_path)
-
-    if not invalid_sequences:
-        print(f"All nucleotide sequences in {vcf_file_path} are valid.")
-        return True
-    else:
-        print(
-            f"Found {len(invalid_sequences)} invalid nucleotide sequences in {vcf_file_path}:"
-        )
-        for chrom, pos, field, value in invalid_sequences:
-            print(f"  {chrom}:{pos} {field}={value}")
-        return False
+    results = {
+        "is_valid": len(invalid_sequences) == 0,
+        "invalid_sequences": [
+            {"chromosome": chrom, "position": pos, "field": field, "value": value}
+            for chrom, pos, field, value in invalid_sequences
+        ],
+    }
+    return results
 
 
 def main():
@@ -172,31 +152,29 @@ def main():
     parser.add_argument(
         "--input_dir", required=True, help="Directory containing VCF files"
     )
+    parser.add_argument(
+        "--output_file",
+        default="expert_knowledge_results.json",
+        help="Output JSON file path",
+    )
     args = parser.parse_args()
 
-    # Get all VCF files in the directory
     vcf_files = glob.glob(os.path.join(args.input_dir, "*.vcf"))
 
     if not vcf_files:
-        print(f"No VCF files found in {args.input_dir}")
-        return
+        results = {"error": f"No VCF files found in {args.input_dir}"}
+    else:
+        results = {"files": {}}
+        for vcf_file in vcf_files:
+            file_results = {
+                "position_validation": report_invalid_positions(vcf_file),
+                "nucleotide_validation": report_invalid_nucleotides(vcf_file),
+            }
+            results["files"][os.path.basename(vcf_file)] = file_results
 
-    print(f"Found {len(vcf_files)} VCF files to validate")
-
-    # Process each VCF file
-    for vcf_file in vcf_files:
-        print(f"\nValidating {os.path.basename(vcf_file)}...")
-
-        print("Checking positions...")
-        report_invalid_positions(vcf_file)
-
-        print("Checking nucleotides...")
-        report_invalid_nucleotides(vcf_file)
+    with open(args.output_file, "w") as f:
+        json.dump(results, f, indent=2)
 
 
 if __name__ == "__main__":
     main()
-
-
-# TODO: Format output so that it includes info about the criterion used as well as a source for it.
-# TODO: Make output a json file.

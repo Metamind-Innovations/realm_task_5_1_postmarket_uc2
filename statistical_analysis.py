@@ -1,5 +1,6 @@
 import argparse
 import glob
+import json
 import os
 import re
 
@@ -92,31 +93,31 @@ def vcf_header_consistency(vcf_file_path):
 def validate_type(value, field_type):
     """
     Validates if a value matches the expected VCF field type.
-    
+
     Args:
         value (str): The value to validate
         field_type (str): The expected type (Integer, Float, Flag, Character, String)
-        
+
     Returns:
         bool: True if the value matches the expected type, False otherwise
     """
-    if field_type == 'Integer':
+    if field_type == "Integer":
         try:
             int(value)
             return True
         except ValueError:
             return False
-    elif field_type == 'Float':
+    elif field_type == "Float":
         try:
             float(value)
             return True
         except ValueError:
             return False
-    elif field_type == 'Flag':
-        return value == '' or value is None
-    elif field_type == 'Character':
+    elif field_type == "Flag":
+        return value == "" or value is None
+    elif field_type == "Character":
         return len(value) == 1
-    elif field_type == 'String':
+    elif field_type == "String":
         return True
     else:
         return False
@@ -125,172 +126,160 @@ def validate_type(value, field_type):
 def data_type_consistency(vcf_file_path):
     """
     Validates data type consistency in INFO and FORMAT fields against their definitions in the header.
-    
+
     Checks:
     1) For each key in the INFO column, verifies that values match the Type specified in ##INFO header
     2) For each key in the FORMAT column, verifies that values match the Type specified in ##FORMAT header
-    
+
     Args:
         vcf_file_path (str): Path to the VCF file to validate
-        
+
     Returns:
         dict: Dictionary with validation results and any errors found
     """
     results = {
-        'is_valid': True,
-        'errors': {
-            'info_type_mismatch': [],
-            'format_type_mismatch': [],
-            'undefined_info_field': [],
-            'undefined_format_field': []
-        }
+        "is_valid": True,
+        "errors": {
+            "info_type_mismatch": [],
+            "format_type_mismatch": [],
+            "undefined_info_field": [],
+            "undefined_format_field": [],
+        },
     }
-    
+
     info_fields = {}
     format_fields = {}
-    
-    with open(vcf_file_path, 'r') as vcf_file:
+
+    with open(vcf_file_path, "r") as vcf_file:
         header_line = None
         column_indices = {}
-        
+
         for line_number, line in enumerate(vcf_file, 1):
             line = line.strip()
-            
-            # Process header lines
-            if line.startswith('##'):
-                # Extract INFO field definitions
-                if line.startswith('##INFO=<'):
+
+            if line.startswith("##"):
+                if line.startswith("##INFO=<"):
                     # Parse the INFO field definition
-                    match = re.search(r'ID=([^,]+).*Type=([^,]+)', line)
+                    match = re.search(r"ID=([^,]+).*Type=([^,]+)", line)
                     if match:
                         field_id, field_type = match.groups()
                         info_fields[field_id] = field_type
-                
-                # Extract FORMAT field definitions
-                elif line.startswith('##FORMAT=<'):
+
+                elif line.startswith("##FORMAT=<"):
                     # Parse the FORMAT field definition
-                    match = re.search(r'ID=([^,]+).*Type=([^,]+)', line)
+                    match = re.search(r"ID=([^,]+).*Type=([^,]+)", line)
                     if match:
                         field_id, field_type = match.groups()
                         format_fields[field_id] = field_type
-                
+
                 continue
-            
-            # Process column header line
-            if line.startswith('#CHROM'):
+
+            if line.startswith("#CHROM"):
                 header_line = line
-                fields = line.split('\t')
-                
-                # Store column indices for easier access
+                fields = line.split("\t")
+
                 for i, field in enumerate(fields):
                     column_indices[field] = i
-                
+
                 continue
-            
-            # Skip empty lines or remaining header lines
-            if not line or line.startswith('#'):
+
+            if not line or line.startswith("#"):
                 continue
-            
-            # Process data lines
-            fields = line.split('\t')
-            
-            # Validate INFO field
-            if 'INFO' in column_indices and column_indices['INFO'] < len(fields):
-                info_idx = column_indices['INFO']
+
+            fields = line.split("\t")
+
+            if "INFO" in column_indices and column_indices["INFO"] < len(fields):
+                info_idx = column_indices["INFO"]
                 info_field = fields[info_idx]
-                
-                # Skip if INFO field is empty or just a dot
-                if info_field and info_field != '.':
-                    # Process each key-value pair in INFO
-                    for item in info_field.split(';'):
-                        # Handle flags (no equals sign)
-                        if '=' not in item:
+
+                if info_field and info_field != ".":
+                    for item in info_field.split(";"):
+                        if "=" not in item:
                             if item not in info_fields:
-                                results['errors']['undefined_info_field'].append(
+                                results["errors"]["undefined_info_field"].append(
                                     f"Line {line_number}: Undefined INFO field '{item}'"
                                 )
-                                results['is_valid'] = False
-                            elif info_fields[item] != 'Flag':
-                                results['errors']['info_type_mismatch'].append(
+                                results["is_valid"] = False
+                            elif info_fields[item] != "Flag":
+                                results["errors"]["info_type_mismatch"].append(
                                     f"Line {line_number}: INFO field '{item}' should be a Flag"
                                 )
-                                results['is_valid'] = False
+                                results["is_valid"] = False
                             continue
-                            
-                        # Handle key-value pairs
-                        key, value = item.split('=', 1)
-                        
-                        # Check if key is defined in header
+
+                        key, value = item.split("=", 1)
+
                         if key not in info_fields:
-                            results['errors']['undefined_info_field'].append(
+                            results["errors"]["undefined_info_field"].append(
                                 f"Line {line_number}: Undefined INFO field '{key}'"
                             )
-                            results['is_valid'] = False
+                            results["is_valid"] = False
                             continue
-                        
-                        # Get expected type
+
                         expected_type = info_fields[key]
-                        
-                        # Handle comma-separated values - validate each value individually
-                        for val in value.split(','):
-                            # Skip missing values (represented as '.')
-                            if val == '.':
+
+                        for val in value.split(","):
+                            if val == ".":
                                 continue
-                                
-                            # Validate the value against its expected type
+
                             if not validate_type(val, expected_type):
-                                results['errors']['info_type_mismatch'].append(
+                                results["errors"]["info_type_mismatch"].append(
                                     f"Line {line_number}: INFO field '{key}' value '{val}' does not match type '{expected_type}'"
                                 )
-                                results['is_valid'] = False
-            
-            # Validate FORMAT field and sample data
-            if 'FORMAT' in column_indices and column_indices['FORMAT'] < len(fields):
-                format_idx = column_indices['FORMAT']
+                                results["is_valid"] = False
+
+            if "FORMAT" in column_indices and column_indices["FORMAT"] < len(fields):
+                format_idx = column_indices["FORMAT"]
                 format_field = fields[format_idx]
-                format_keys = format_field.split(':')
-                
-                # Check if all FORMAT keys are defined
+                format_keys = format_field.split(":")
+
                 for key in format_keys:
                     if key not in format_fields:
-                        results['errors']['undefined_format_field'].append(
+                        results["errors"]["undefined_format_field"].append(
                             f"Line {line_number}: Undefined FORMAT field '{key}'"
                         )
-                        results['is_valid'] = False
-                
-                # Validate sample data if available
+                        results["is_valid"] = False
+
                 if format_idx + 1 < len(fields):
                     sample_field = fields[format_idx + 1]
-                    sample_values = sample_field.split(':')
-                    
-                    # Check if number of values matches number of keys
+                    sample_values = sample_field.split(":")
+
                     if len(sample_values) != len(format_keys):
-                        continue  # Skip validation if counts don't match
-                    
-                    # Validate each value against its expected type
+                        continue
+
                     for i, (key, value) in enumerate(zip(format_keys, sample_values)):
-                        if key in format_fields and value != '.':
+                        if key in format_fields and value != ".":
                             expected_type = format_fields[key]
-                            
-                            # Special handling for GT field
-                            if key == 'GT':
+
+                            if key == "GT":
                                 # GT can be in the form 0/1, 0|1, etc.
-                                if not (('/' in value and all(c.isdigit() or c == '/' for c in value)) or 
-                                       ('|' in value and all(c.isdigit() or c == '|' for c in value))):
-                                    results['errors']['format_type_mismatch'].append(
+                                if not (
+                                    (
+                                        "/" in value
+                                        and all(c.isdigit() or c == "/" for c in value)
+                                    )
+                                    or (
+                                        "|" in value
+                                        and all(c.isdigit() or c == "|" for c in value)
+                                    )
+                                ):
+                                    results["errors"]["format_type_mismatch"].append(
                                         f"Line {line_number}: FORMAT field 'GT' value '{value}' is not a valid genotype"
                                     )
-                                    results['is_valid'] = False
+                                    results["is_valid"] = False
                             # Handle other fields that might have comma-separated values
                             else:
-                                # Some FORMAT fields can also have comma-separated values
-                                for subval in value.split(','):
-                                    if subval != '.' and not validate_type(subval, expected_type):
-                                        results['errors']['format_type_mismatch'].append(
+                                for subval in value.split(","):
+                                    if subval != "." and not validate_type(
+                                        subval, expected_type
+                                    ):
+                                        results["errors"][
+                                            "format_type_mismatch"
+                                        ].append(
                                             f"Line {line_number}: FORMAT field '{key}' value '{subval}' does not match type '{expected_type}'"
                                         )
-                                        results['is_valid'] = False
-    
+                                        results["is_valid"] = False
+
     return results
 
 
@@ -404,66 +393,39 @@ def check_missing_values(vcf_file_path):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Validate VCF files')
-    parser.add_argument('--input_dir', type=str, default='data/preprocessed_vcf',
-                        help='Directory containing VCF files to validate')
+    parser = argparse.ArgumentParser(description="Validate VCF files")
+    parser.add_argument(
+        "--input_dir",
+        type=str,
+        default="data/preprocessed_vcf",
+        help="Directory containing VCF files to validate",
+    )
     args = parser.parse_args()
-    
+
     # Find all VCF files in the input directory
-    vcf_files = glob.glob(os.path.join(args.input_dir, '*.vcf'))
-    
+    vcf_files = glob.glob(os.path.join(args.input_dir, "*.vcf"))
+
     if not vcf_files:
-        print(f"No VCF files found in {args.input_dir}")
+        results = {"error": f"No VCF files found in {args.input_dir}"}
+        with open("statistical_analysis.json", "w") as f:
+            json.dump(results, f, indent=4)
         return
 
-    print(f"Found {len(vcf_files)} VCF files to validate")
+    all_results = {"total_files": len(vcf_files), "files": {}}
 
     # Process each VCF file
     for vcf_file in vcf_files:
-        print(f"\nValidating {os.path.basename(vcf_file)}...")
-        
-        print("Checking header consistency...")
-        header_results = vcf_header_consistency(vcf_file)
-        
-        if header_results['is_valid']:
-            print("✓ VCF file passed all header consistency checks.")
-        else:
-            print("✗ VCF file failed some header consistency checks:")
-            for error_type, errors in header_results['errors'].items():
-                if errors:
-                    print(f"  {error_type.replace('_', ' ').title()}:")
-                    for error in errors:
-                        print(f"    - {error}")
-        
-        print("Checking for missing values...")
-        missing_results = check_missing_values(vcf_file)
-        
-        if missing_results['is_valid']:
-            print("✓ VCF file passed all missing value checks.")
-        else:
-            print("✗ VCF file failed some missing value checks:")
-            for error_type, errors in missing_results['errors'].items():
-                if errors:
-                    print(f"  {error_type.replace('_', ' ').title()}:")
-                    for error in errors:
-                        print(f"    - {error}")
-        
-        print("Checking data type consistency...")
-        type_results = data_type_consistency(vcf_file)
-        
-        if type_results['is_valid']:
-            print("✓ VCF file passed all data type consistency checks.")
-        else:
-            print("✗ VCF file failed some data type consistency checks:")
-            for error_type, errors in type_results['errors'].items():
-                if errors:
-                    print(f"  {error_type.replace('_', ' ').title()}:")
-                    for error in errors:
-                        print(f"    - {error}")
+        file_name = os.path.basename(vcf_file)
+        all_results["files"][file_name] = {
+            "header_consistency": vcf_header_consistency(vcf_file),
+            "missing_values": check_missing_values(vcf_file),
+            "data_type_consistency": data_type_consistency(vcf_file),
+        }
+
+    # Save results to JSON file
+    with open("statistical_analysis.json", "w") as f:
+        json.dump(all_results, f, indent=4)
 
 
 if __name__ == "__main__":
     main()
-
-# TODO: Check with synthetic VCF files with different types of errors.
-# TODO: Make output a json file.
