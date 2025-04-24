@@ -400,6 +400,11 @@ def main():
         default="data/preprocessed_vcf",
         help="Directory containing VCF files to validate",
     )
+    parser.add_argument(
+        "--output_file",
+        default="artifacts/expert_knowledge_results.json",
+        help="Output JSON file path",
+    )
     args = parser.parse_args()
 
     # Create artifacts directory if it doesn't exist
@@ -423,7 +428,7 @@ def main():
             "data_type_consistency": data_type_consistency(vcf_file),
         }
 
-    with open("artifacts/statistical_analysis.json", "w") as f:
+    with open(args.output_file, "w") as f:
         json.dump(all_results, f, indent=4)
 
 

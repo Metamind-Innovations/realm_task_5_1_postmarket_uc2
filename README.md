@@ -1,3 +1,6 @@
+TODO: Create kubeflow pipeline for the entire process.
+TODO: Finalize README.md
+
 Expert Knowledge:
 
 1) Bases can be A, C, G, T, N (https://pubs.acs.org/doi/abs/10.1021/ar200257x)
