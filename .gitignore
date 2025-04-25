@@ -1,4 +1,5 @@
 .venv
+data/
 data/dummy_vcf/
 data/rwd_csv/
 data/rwd_results/

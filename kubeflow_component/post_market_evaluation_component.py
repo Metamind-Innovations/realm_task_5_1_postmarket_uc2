@@ -213,7 +213,7 @@ def pharmcat_analysis_docker(
 ):
     command_str = f"mkdir -p '{result_folder.path}' && python3 -u /scripts/pharmcat_folder_processor.py --input_folder '{input_folder.path}' --result_folder '{result_folder.path}'"
     return dsl.ContainerSpec(
-        image="gigakos/pharmcat-realm:latest",  # Insert your Docker image here (e.g. "docker.io/<username>/pharmcat-realm:latest")
+        image="<your_docker_pharmcat_image>",  # Insert your Docker image here (e.g. "docker.io/<username>/pharmcat-realm:latest")
         command=["sh", "-c"],
         args=[command_str],
     )
