@@ -49,7 +49,7 @@ Place all data to be used in a folder named ```data``` with the following struct
   - `rwd_vcf/`: Subfolder containing the VCF files corresponding to the real-world data (RWD)
   - `synthetic_vcf/`: Subfolder containing the VCF files corresponding to the synthetically generated data
 
-### Running Locally
+## Running Locally
 
 1. **Download Dataset:** Download the provided dataset and place the relevant files in the ```data``` as explained in the Data Preparation subsection.
 2. **Download PharmCAT Docker Components:** Download the necessary tools and scripts.
