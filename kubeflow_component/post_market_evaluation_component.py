@@ -136,8 +136,6 @@ def download_project(
     shutil.rmtree(temp_dir)
     print("Download component finished.")
 
-    return (project_files, real_world_data, synthetic_data, groundtruth_labels)
-
 
 @dsl.component(base_image="python:3.10")
 def expert_knowledge(
@@ -213,7 +211,7 @@ def pharmcat_analysis_docker(
     input_folder: dsl.Input[dsl.Dataset],
     result_folder: dsl.Output[dsl.Dataset],
 ):
-    command_str = f"mkdir -p '{result_folder.path}' && python3 -u /scripts/pharmcat_folder_processor.py --input_folder '{input_folder}' --result_folder '{result_folder.path}'"
+    command_str = f"mkdir -p '{result_folder.path}' && python3 -u /scripts/pharmcat_folder_processor.py --input_folder '{input_folder.path}' --result_folder '{result_folder.path}'"
     return dsl.ContainerSpec(
         image="gigakos/pharmcat-realm:latest",  # Insert your Docker image here (e.g. "docker.io/<username>/pharmcat-realm:latest")
         command=["sh", "-c"],
@@ -221,7 +219,10 @@ def pharmcat_analysis_docker(
     )
 
 
-@dsl.component(base_image="python:3.10")
+@dsl.component(
+    base_image="python:3.10",
+    packages_to_install=["scikit-learn", "pandas", "numpy"]
+)
 def adversarial_evaluation(
     project_files: dsl.Input[dsl.Model],
     groundtruth_file: dsl.Input[dsl.Dataset],
@@ -229,6 +230,8 @@ def adversarial_evaluation(
     synthetic_predictions_file: dsl.Input[dsl.Dataset],
     output_file: dsl.Output[dsl.Dataset],
 ):
+    import glob
+    import os
     from pathlib import Path
     import subprocess
 
@@ -236,16 +239,39 @@ def adversarial_evaluation(
     
     if not script_path.exists():
         raise FileNotFoundError(f"Script not found at {script_path}")
+    
+    groundtruth_path = groundtruth_file.path
+    if os.path.isdir(groundtruth_path):
+        csv_files = glob.glob(os.path.join(groundtruth_path, "*.csv"))
+        if csv_files:
+            groundtruth_path = csv_files[0]  # Use the first CSV file found
+            print(f"Using groundtruth file: {groundtruth_path}")
+        else:
+            raise FileNotFoundError(f"No CSV files found in {groundtruth_path}")
+        
+    rwd_predictions_path = rwd_predictions_file.path
+    if os.path.isdir(rwd_predictions_path):
+        csv_files = glob.glob(os.path.join(rwd_predictions_path, "*.csv"))
+        if csv_files:
+            rwd_predictions_path = csv_files[0]
+            print(f"Using RWD predictions file: {rwd_predictions_path}")
+    
+    synthetic_predictions_path = synthetic_predictions_file.path
+    if os.path.isdir(synthetic_predictions_path):
+        csv_files = glob.glob(os.path.join(synthetic_predictions_path, "*.csv"))
+        if csv_files:
+            synthetic_predictions_path = csv_files[0]
+            print(f"Using synthetic predictions file: {synthetic_predictions_path}")
 
     command = [
         "python",
         str(script_path),
         "--groundtruth_file",
-        groundtruth_file.path,
+        groundtruth_path,
         "--rwd_predictions_file",
-        rwd_predictions_file.path,
+        rwd_predictions_path,
         "--synthetic_predictions_file",
-        synthetic_predictions_file.path,
+        synthetic_predictions_path,
         "--output_file",
         output_file.path,
     ]
