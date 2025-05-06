@@ -402,7 +402,7 @@ def main():
     )
     parser.add_argument(
         "--output_file",
-        default="artifacts/expert_knowledge_results.json",
+        default="artifacts/statistical_analysis_results.json",
         help="Output JSON file path",
     )
     args = parser.parse_args()

@@ -16,7 +16,7 @@ This repository implements a comprehensive post-market evaluation pipeline for s
 
 **Key Components:**
 
-- **Expert Knowledge Evaluation**: Evaluates the feasibility of the variants included in the VCF files based on thw two following rules:
+- **Expert Knowledge Evaluation**: Evaluates the feasibility of the variants included in the VCF files based on the two following rules:
   - The valid values for the bases in the reference (REF) and alternative (ALT) sequences are A (adenine), T (Thymine), C (Cytosine), G (Guanine), and N (for cases where the base is unknown), based on standard literature as concluded in [Hirao et. al. (2024)](https://pubs.acs.org/doi/abs/10.1021/ar200257x).
   - The position of each variant, as it appears in column POS in the VCF, should be within the examined chromosome. That means that the value in POS should be smaller than the total length of the chromosome at hand. The total lengths of chromosomes for the utilized GRCh38.p13 genome assembly can be found [here](https://www.ncbi.nlm.nih.gov/datasets/genome/GCF_000001405.39/).
 
@@ -90,7 +90,7 @@ The output of this evaluation is a JSON file saved in the `artifacts` folder wit
 11. Perform the adversarial evaluation by running:
 
 ```
-python3 adversarial.py --groundtruth_file "data/groundtruth/groundtruth_phenotype_filtered.csv" --rwd_predictions_file "data/rwd_results/phenotypes.csv" --synthetic_predictions_file "data/synthetic_results/phenotypes.csv"
+python3 adversarial_evaluation.py --groundtruth_file "data/groundtruth/groundtruth_phenotype_filtered.csv" --rwd_predictions_file "data/rwd_results/phenotypes.csv" --synthetic_predictions_file "data/synthetic_results/phenotypes.csv"
 ```
 
 The output of this evaluation is a JSON file saved in the `artifacts` folder with the following format:
@@ -117,8 +117,15 @@ image="<your_docker_pharmcat_image>",
 image="docker.io/username/pharmcat-realm:latest",
 ```
 
-After configuring the Docker image, the pipeline can be compiled and deployed to a Kubeflow environment by executing `python3 .\kubeflow_component\post_market_evaluation_component.py` and then uploading the generated YAML file to the Kubeflow UI.
-The Kubeflow UI expects 1 pipeline argument when running: `github_repo_url` which is the repo that contains the data and python scripts.
+After configuring the Docker image, the pipeline can be compiled and deployed to a Kubeflow environment by executing:
+
+```
+python3 .\kubeflow_component\post_market_evaluation_component.py
+```
+
+and then uploading the generated YAML file to the Kubeflow UI.
+The Kubeflow UI expects one pipeline argument when running:
+* `github_repo_url`, the repo that contains the data and python scripts.
 
 The pipeline structure can be seen in the image below:
 ![Kubeflow Pipeline](kubeflow_pipeline.png)
