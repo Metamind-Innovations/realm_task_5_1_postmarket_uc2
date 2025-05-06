@@ -38,9 +38,9 @@ def preprocess_groundtruth(csv_file_path):
         pd.DataFrame: DataFrame with transformed phenotype values
     """
     try:
-        groundtruth_df = pd.read_csv(csv_file_path, sep=";", index_col="Unnamed: 0")
+        groundtruth_df = pd.read_csv(csv_file_path, sep=",", index_col="Unnamed: 0")
     except (ValueError, KeyError):
-        groundtruth_df = pd.read_csv(csv_file_path, sep=";")
+        groundtruth_df = pd.read_csv(csv_file_path, sep=",", index_col="Unnamed: 0")
 
     if "Sample ID" in groundtruth_df.columns:
         groundtruth_df = groundtruth_df.rename(columns={"Sample ID": "Sample"})
