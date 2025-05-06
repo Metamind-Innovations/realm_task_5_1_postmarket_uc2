@@ -392,6 +392,89 @@ def check_missing_values(vcf_file_path):
     return results
 
 
+def statistical_analysis_evaluation(input_dir):
+    """
+    Process all VCF files in the input directory and generate validation results.
+
+    Args:
+        input_dir (str): Directory containing VCF files
+
+    Returns:
+        dict: Results dictionary containing validation results and summary statistics
+    """
+    vcf_files = glob.glob(os.path.join(input_dir, "*.vcf"))
+
+    if not vcf_files:
+        return {"error": f"No VCF files found in {input_dir}"}
+
+    all_results = {
+        "total_files": len(vcf_files),
+        "summary": {
+            "header_consistency": {"valid": 0, "invalid": 0},
+            "missing_values": {"valid": 0, "invalid": 0},
+            "data_type_consistency": {"valid": 0, "invalid": 0},
+            "overall": {"valid": 0, "invalid": 0},
+        },
+        "files": {},
+    }
+
+    for vcf_file in vcf_files:
+        file_name = os.path.basename(vcf_file)
+
+        header_results = vcf_header_consistency(vcf_file)
+        missing_values_results = check_missing_values(vcf_file)
+        data_type_results = data_type_consistency(vcf_file)
+
+        all_results["files"][file_name] = {
+            "header_consistency": header_results,
+            "missing_values": missing_values_results,
+            "data_type_consistency": data_type_results,
+        }
+
+        # Summary statistics
+        if header_results["is_valid"]:
+            all_results["summary"]["header_consistency"]["valid"] += 1
+        else:
+            all_results["summary"]["header_consistency"]["invalid"] += 1
+
+        if missing_values_results["is_valid"]:
+            all_results["summary"]["missing_values"]["valid"] += 1
+        else:
+            all_results["summary"]["missing_values"]["invalid"] += 1
+
+        if data_type_results["is_valid"]:
+            all_results["summary"]["data_type_consistency"]["valid"] += 1
+        else:
+            all_results["summary"]["data_type_consistency"]["invalid"] += 1
+
+        # Overall validity (a file is valid only if it passes all checks)
+        if (
+            header_results["is_valid"]
+            and missing_values_results["is_valid"]
+            and data_type_results["is_valid"]
+        ):
+            all_results["summary"]["overall"]["valid"] += 1
+        else:
+            all_results["summary"]["overall"]["invalid"] += 1
+
+    total_files = all_results["total_files"]
+    if total_files > 0:
+        for category in [
+            "header_consistency",
+            "missing_values",
+            "data_type_consistency",
+            "overall",
+        ]:
+            all_results["summary"][category]["valid_percentage"] = (
+                all_results["summary"][category]["valid"] / total_files
+            ) * 100
+            all_results["summary"][category]["invalid_percentage"] = (
+                all_results["summary"][category]["invalid"] / total_files
+            ) * 100
+
+    return all_results
+
+
 def main():
     parser = argparse.ArgumentParser(description="Validate VCF files")
     parser.add_argument(
@@ -410,23 +493,7 @@ def main():
     # Create artifacts directory if it doesn't exist
     os.makedirs("artifacts", exist_ok=True)
 
-    vcf_files = glob.glob(os.path.join(args.input_dir, "*.vcf"))
-
-    if not vcf_files:
-        results = {"error": f"No VCF files found in {args.input_dir}"}
-        with open("artifacts/statistical_analysis.json", "w") as f:
-            json.dump(results, f, indent=4)
-        return
-
-    all_results = {"total_files": len(vcf_files), "files": {}}
-
-    for vcf_file in vcf_files:
-        file_name = os.path.basename(vcf_file)
-        all_results["files"][file_name] = {
-            "header_consistency": vcf_header_consistency(vcf_file),
-            "missing_values": check_missing_values(vcf_file),
-            "data_type_consistency": data_type_consistency(vcf_file),
-        }
+    all_results = statistical_analysis_evaluation(args.input_dir)
 
     with open(args.output_file, "w") as f:
         json.dump(all_results, f, indent=4)

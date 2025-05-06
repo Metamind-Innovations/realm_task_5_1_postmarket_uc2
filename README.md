@@ -30,7 +30,7 @@ This repository implements a comprehensive post-market evaluation pipeline for s
 
 - **Adversarial Evaluation**: Compares classification performance for predicting pharmacogenomic phenotypes when using real and synthetic VCF files for the following key pharmacogenes: CYP2B6, CYP2C9, CYP2C19, CYP3A5, SLCO1B1, TPMT, and DPYD. Specifically, it uses:
   - PharmCAT as a SOTA model for predicting pharmacogenomic phenotypes
-  - Accuracy, Precision, Recall, and F1-Score for quantitative comparison
+  - Accuracy, Precision, Recall, and F1-Score for quantitative comparison. These metrics are weighted to account for potential class imbalances as well as averaged across all classes.
   - Detailed difference analysis between original and synthetic results
 
 ## Getting Started

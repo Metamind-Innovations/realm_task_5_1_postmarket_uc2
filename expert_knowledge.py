@@ -147,6 +147,76 @@ def report_invalid_nucleotides(vcf_file_path):
     return results
 
 
+def expert_knowledge_evaluation(input_dir):
+    """
+    Process all VCF files in the input directory and generate validation results.
+
+    Args:
+        input_dir (str): Directory containing VCF files
+
+    Returns:
+        dict: Results dictionary containing validation results and summary statistics
+    """
+    vcf_files = glob.glob(os.path.join(input_dir, "*.vcf"))
+
+    if not vcf_files:
+        results = {"error": f"No VCF files found in {input_dir}"}
+    else:
+        results = {
+            "criteria": {
+                "nucleotides": {
+                    "description": "Based on Hirao et. al. (https://pubs.acs.org/doi/abs/10.1021/ar200257x) allele bases can be A, C, G, T (+ N which is used for undefined bases).",
+                    "valid_bases": ["A", "C", "G", "T", "N"],
+                },
+                "positions": {
+                    "description": "For each chromosome, the position of the of the variant should be smaller than the chromosome's total length (https://www.ncbi.nlm.nih.gov/datasets/genome/GCF_000001405.39/).",
+                    "source": "NCBI GRCh38 Assembly",
+                },
+            },
+            "summary": {
+                "total_files": len(vcf_files),
+                "positions": {"valid": 0, "invalid": 0},
+                "nucleotides": {"valid": 0, "invalid": 0},
+            },
+            "files": {},
+        }
+
+        for vcf_file in vcf_files:
+            file_results = {
+                "position_validation": report_invalid_positions(vcf_file),
+                "nucleotide_validation": report_invalid_nucleotides(vcf_file),
+            }
+            results["files"][os.path.basename(vcf_file)] = file_results
+
+            # Summary statistics
+            if file_results["position_validation"]["is_valid"]:
+                results["summary"]["positions"]["valid"] += 1
+            else:
+                results["summary"]["positions"]["invalid"] += 1
+
+            if file_results["nucleotide_validation"]["is_valid"]:
+                results["summary"]["nucleotides"]["valid"] += 1
+            else:
+                results["summary"]["nucleotides"]["invalid"] += 1
+
+        total_files = results["summary"]["total_files"]
+        if total_files > 0:
+            results["summary"]["positions"]["valid_percentage"] = (
+                results["summary"]["positions"]["valid"] / total_files
+            ) * 100
+            results["summary"]["positions"]["invalid_percentage"] = (
+                results["summary"]["positions"]["invalid"] / total_files
+            ) * 100
+            results["summary"]["nucleotides"]["valid_percentage"] = (
+                results["summary"]["nucleotides"]["valid"] / total_files
+            ) * 100
+            results["summary"]["nucleotides"]["invalid_percentage"] = (
+                results["summary"]["nucleotides"]["invalid"] / total_files
+            ) * 100
+
+    return results
+
+
 def main():
     parser = argparse.ArgumentParser(description="Validate VCF files")
     parser.add_argument(
@@ -162,30 +232,10 @@ def main():
     # Create artifacts directory if it doesn't exist
     os.makedirs("artifacts", exist_ok=True)
 
-    vcf_files = glob.glob(os.path.join(args.input_dir, "*.vcf"))
+    results = expert_knowledge_evaluation(args.input_dir)
 
-    if not vcf_files:
-        results = {"error": f"No VCF files found in {args.input_dir}"}
-    else:
-        results = {
-            "criteria": {
-                "nucleotides": {
-                    "description": "Based on Hirao et. al. (https://pubs.acs.org/doi/abs/10.1021/ar200257x) allele bases can be A, C, G, T (+ N which is used for undefined bases).",
-                    "valid_bases": ["A", "C", "G", "T", "N"],
-                },
-                "positions": {
-                    "description": "For each chromosome, the position of the of the variant should be smaller than the chromosome's total length (https://www.ncbi.nlm.nih.gov/datasets/genome/GCF_000001405.39/).",
-                    "source": "NCBI GRCh38 Assembly",
-                },
-            },
-            "files": {},
-        }
-        for vcf_file in vcf_files:
-            file_results = {
-                "position_validation": report_invalid_positions(vcf_file),
-                "nucleotide_validation": report_invalid_nucleotides(vcf_file),
-            }
-            results["files"][os.path.basename(vcf_file)] = file_results
+    with open(args.output_file, "w") as f:
+        json.dump(results, f, indent=2)
 
     with open(args.output_file, "w") as f:
         json.dump(results, f, indent=2)
