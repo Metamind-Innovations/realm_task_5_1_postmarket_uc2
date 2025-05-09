@@ -3,16 +3,13 @@ from kfp import dsl
 from kfp.dsl import Output, Model, Dataset
 
 
-@kfp.dsl.component(
-    base_image="python:3.10",
-    packages_to_install=["requests"]
-)
+@kfp.dsl.component(base_image="python:3.10", packages_to_install=["requests"])
 def download_project(
-        github_repo_url: str,
-        project_files: Output[Model],
-        real_world_data: Output[Dataset],
-        synthetic_data: Output[Dataset],
-        groundtruth_labels: Output[Dataset],
+    github_repo_url: str,
+    project_files: Output[Model],
+    real_world_data: Output[Dataset],
+    synthetic_data: Output[Dataset],
+    groundtruth_labels: Output[Dataset],
 ):
     import subprocess
     import shutil
@@ -33,7 +30,9 @@ def download_project(
 
     print("Installing git...")
     subprocess.run(["apt-get", "update"], check=True, capture_output=True, text=True)
-    subprocess.run(["apt-get", "install", "-y", "git"], check=True, capture_output=True, text=True)
+    subprocess.run(
+        ["apt-get", "install", "-y", "git"], check=True, capture_output=True, text=True
+    )
     print("Git installed.")
     temp_dir = Path("/tmp/pharmcat_repo")
     if temp_dir.exists():
@@ -89,37 +88,53 @@ def download_project(
                 if target_list_key == "project_files":
                     dst_path = project_files_path / item_name
                     if is_dir:
-                        print(f"Copying directory '{item_name}' from {src_path} to {dst_path}...")
+                        print(
+                            f"Copying directory '{item_name}' from {src_path} to {dst_path}..."
+                        )
                         shutil.copytree(src_path, dst_path, dirs_exist_ok=True)
                     else:
-                        print(f"Copying file '{item_name}' from {src_path} to {dst_path}...")
+                        print(
+                            f"Copying file '{item_name}' from {src_path} to {dst_path}..."
+                        )
                         shutil.copy2(src_path, dst_path)
 
                 elif target_list_key == "real_world_data":
                     dst_path = real_world_data_path
                     if is_dir:
-                        print(f"Copying directory '{item_name}' from {src_path} to {dst_path}...")
+                        print(
+                            f"Copying directory '{item_name}' from {src_path} to {dst_path}..."
+                        )
                         shutil.copytree(src_path, dst_path, dirs_exist_ok=True)
                     else:
-                        print(f"Copying file '{item_name}' from {src_path} to {dst_path}...")
+                        print(
+                            f"Copying file '{item_name}' from {src_path} to {dst_path}..."
+                        )
                         shutil.copy2(src_path, dst_path)
 
                 elif target_list_key == "synthetic_data":
                     dst_path = synthetic_data_path
                     if is_dir:
-                        print(f"Copying directory '{item_name}' from {src_path} to {dst_path}...")
+                        print(
+                            f"Copying directory '{item_name}' from {src_path} to {dst_path}..."
+                        )
                         shutil.copytree(src_path, dst_path, dirs_exist_ok=True)
                     else:
-                        print(f"Copying file '{item_name}' from {src_path} to {dst_path}...")
+                        print(
+                            f"Copying file '{item_name}' from {src_path} to {dst_path}..."
+                        )
                         shutil.copy2(src_path, dst_path)
 
                 elif target_list_key == "groundtruth_labels":
                     dst_path = groundtruth_labels_path
                     if is_dir:
-                        print(f"Copying directory '{item_name}' from {src_path} to {dst_path}...")
+                        print(
+                            f"Copying directory '{item_name}' from {src_path} to {dst_path}..."
+                        )
                         shutil.copytree(src_path, dst_path, dirs_exist_ok=True)
                     else:
-                        print(f"Copying file '{item_name}' from {src_path} to {dst_path}...")
+                        print(
+                            f"Copying file '{item_name}' from {src_path} to {dst_path}..."
+                        )
                         shutil.copy2(src_path, dst_path)
 
                 if dst_path:
@@ -149,7 +164,7 @@ def expert_knowledge(
     from pathlib import Path
 
     script_path = Path(project_files.path) / "expert_knowledge.py"
-    
+
     if not script_path.exists():
         raise FileNotFoundError(f"Script not found at {script_path}")
 
@@ -183,7 +198,7 @@ def statistical_analysis(
     from pathlib import Path
 
     script_path = Path(project_files.path) / "statistical_analysis.py"
-    
+
     if not script_path.exists():
         raise FileNotFoundError(f"Script not found at {script_path}")
 
@@ -220,8 +235,7 @@ def pharmcat_analysis_docker(
 
 
 @dsl.component(
-    base_image="python:3.10",
-    packages_to_install=["scikit-learn", "pandas", "numpy"]
+    base_image="python:3.10", packages_to_install=["scikit-learn", "pandas", "numpy"]
 )
 def adversarial_evaluation(
     project_files: dsl.Input[dsl.Model],
@@ -236,10 +250,10 @@ def adversarial_evaluation(
     import subprocess
 
     script_path = Path(project_files.path) / "adversarial_evaluation.py"
-    
+
     if not script_path.exists():
         raise FileNotFoundError(f"Script not found at {script_path}")
-    
+
     groundtruth_path = groundtruth_file.path
     if os.path.isdir(groundtruth_path):
         csv_files = glob.glob(os.path.join(groundtruth_path, "*.csv"))
@@ -248,14 +262,14 @@ def adversarial_evaluation(
             print(f"Using groundtruth file: {groundtruth_path}")
         else:
             raise FileNotFoundError(f"No CSV files found in {groundtruth_path}")
-        
+
     rwd_predictions_path = rwd_predictions_file.path
     if os.path.isdir(rwd_predictions_path):
         csv_files = glob.glob(os.path.join(rwd_predictions_path, "*.csv"))
         if csv_files:
             rwd_predictions_path = csv_files[0]
             print(f"Using RWD predictions file: {rwd_predictions_path}")
-    
+
     synthetic_predictions_path = synthetic_predictions_file.path
     if os.path.isdir(synthetic_predictions_path):
         csv_files = glob.glob(os.path.join(synthetic_predictions_path, "*.csv"))
@@ -293,7 +307,6 @@ def adversarial_evaluation(
 def post_market_evaluation_pipeline(
     github_repo_url: str,
 ):
-    
     # Step 0: Download the project
     download_task = download_project(
         github_repo_url=github_repo_url,
@@ -309,7 +322,7 @@ def post_market_evaluation_pipeline(
     # Step 2: Statistical Analysis
     stats_task = statistical_analysis(
         project_files=download_task.outputs["project_files"],
-        input_dir=download_task.outputs["synthetic_data"], 
+        input_dir=download_task.outputs["synthetic_data"],
     )
 
     # Step 3a: PharmCAT Analysis for RWD

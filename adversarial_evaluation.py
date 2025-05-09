@@ -38,9 +38,9 @@ def preprocess_groundtruth(csv_file_path):
         pd.DataFrame: DataFrame with transformed phenotype values
     """
     try:
-        groundtruth_df = pd.read_csv(csv_file_path, sep=";", index_col="Unnamed: 0")
+        groundtruth_df = pd.read_csv(csv_file_path, sep=",", index_col="Unnamed: 0")
     except (ValueError, KeyError):
-        groundtruth_df = pd.read_csv(csv_file_path, sep=";")
+        groundtruth_df = pd.read_csv(csv_file_path, sep=",", index_col="Unnamed: 0")
 
     if "Sample ID" in groundtruth_df.columns:
         groundtruth_df = groundtruth_df.rename(columns={"Sample ID": "Sample"})
@@ -164,7 +164,7 @@ def compare_evaluation_results(rwd_results_df, synthetic_results_df):
         set(synthetic_results_df["Phenotype"])
     )
 
-    metric_columns = ["Accuracy", "Precision", "Recall", "F1-Score", "Samples"]
+    metric_columns = ["Accuracy", "Precision", "Recall", "F1-Score"]
 
     for phenotype in phenotypes:
         comparison[phenotype] = {}
@@ -175,22 +175,21 @@ def compare_evaluation_results(rwd_results_df, synthetic_results_df):
         ]
 
         for metric in metric_columns:
-            comparison[phenotype][metric] = {
-                "rwd": float(rwd_row[metric].iloc[0]) if not rwd_row.empty else None,
-                "synthetic": float(synthetic_row[metric].iloc[0])
+            rwd_value = float(rwd_row[metric].iloc[0]) if not rwd_row.empty else None
+            synthetic_value = (
+                float(synthetic_row[metric].iloc[0])
                 if not synthetic_row.empty
-                else None,
+                else None
+            )
+
+            comparison[phenotype][metric] = {
+                "rwd": rwd_value,
+                "synthetic": synthetic_value,
             }
 
-            # Calculate difference if both values exist
-            if (
-                comparison[phenotype][metric]["rwd"] is not None
-                and comparison[phenotype][metric]["synthetic"] is not None
-            ):
-                comparison[phenotype][metric]["difference"] = (
-                    comparison[phenotype][metric]["synthetic"]
-                    - comparison[phenotype][metric]["rwd"]
-                )
+            if rwd_value is not None and synthetic_value is not None:
+                difference = synthetic_value - rwd_value
+                comparison[phenotype][metric]["difference"] = difference
             else:
                 comparison[phenotype][metric]["difference"] = None
 
