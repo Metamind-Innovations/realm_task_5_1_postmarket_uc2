@@ -400,7 +400,7 @@ def statistical_analysis_evaluation(input_dir):
         input_dir (str): Directory containing VCF files
 
     Returns:
-        dict: Results dictionary containing validation results and summary statistics
+        dict: Results dictionary containing validation results
     """
     vcf_files = glob.glob(os.path.join(input_dir, "*.vcf"))
 
@@ -409,12 +409,6 @@ def statistical_analysis_evaluation(input_dir):
 
     all_results = {
         "total_files": len(vcf_files),
-        "summary": {
-            "header_consistency": {"valid": 0, "invalid": 0},
-            "missing_values": {"valid": 0, "invalid": 0},
-            "data_type_consistency": {"valid": 0, "invalid": 0},
-            "overall": {"valid": 0, "invalid": 0},
-        },
         "files": {},
     }
 
@@ -430,47 +424,6 @@ def statistical_analysis_evaluation(input_dir):
             "missing_values": missing_values_results,
             "data_type_consistency": data_type_results,
         }
-
-        # Summary statistics
-        if header_results["is_valid"]:
-            all_results["summary"]["header_consistency"]["valid"] += 1
-        else:
-            all_results["summary"]["header_consistency"]["invalid"] += 1
-
-        if missing_values_results["is_valid"]:
-            all_results["summary"]["missing_values"]["valid"] += 1
-        else:
-            all_results["summary"]["missing_values"]["invalid"] += 1
-
-        if data_type_results["is_valid"]:
-            all_results["summary"]["data_type_consistency"]["valid"] += 1
-        else:
-            all_results["summary"]["data_type_consistency"]["invalid"] += 1
-
-        # Overall validity (a file is valid only if it passes all checks)
-        if (
-            header_results["is_valid"]
-            and missing_values_results["is_valid"]
-            and data_type_results["is_valid"]
-        ):
-            all_results["summary"]["overall"]["valid"] += 1
-        else:
-            all_results["summary"]["overall"]["invalid"] += 1
-
-    total_files = all_results["total_files"]
-    if total_files > 0:
-        for category in [
-            "header_consistency",
-            "missing_values",
-            "data_type_consistency",
-            "overall",
-        ]:
-            all_results["summary"][category]["valid_percentage"] = (
-                all_results["summary"][category]["valid"] / total_files
-            ) * 100
-            all_results["summary"][category]["invalid_percentage"] = (
-                all_results["summary"][category]["invalid"] / total_files
-            ) * 100
 
     return all_results
 

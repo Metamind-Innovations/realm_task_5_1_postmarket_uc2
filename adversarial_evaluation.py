@@ -166,11 +166,6 @@ def compare_evaluation_results(rwd_results_df, synthetic_results_df):
 
     metric_columns = ["Accuracy", "Precision", "Recall", "F1-Score"]
 
-    comparison["summary"] = {
-        metric: {"rwd": [], "synthetic": [], "difference": []}
-        for metric in metric_columns
-    }
-
     for phenotype in phenotypes:
         comparison[phenotype] = {}
 
@@ -195,42 +190,8 @@ def compare_evaluation_results(rwd_results_df, synthetic_results_df):
             if rwd_value is not None and synthetic_value is not None:
                 difference = synthetic_value - rwd_value
                 comparison[phenotype][metric]["difference"] = difference
-
-                if metric != "Samples":
-                    comparison["summary"][metric]["rwd"].append(rwd_value)
-                    comparison["summary"][metric]["synthetic"].append(synthetic_value)
-                    comparison["summary"][metric]["difference"].append(difference)
             else:
                 comparison[phenotype][metric]["difference"] = None
-
-    # Calculate averages for summary statistics
-    for metric in metric_columns:
-        if metric != "Samples":
-            if comparison["summary"][metric]["rwd"]:
-                comparison["summary"][metric]["rwd_avg"] = sum(
-                    comparison["summary"][metric]["rwd"]
-                ) / len(comparison["summary"][metric]["rwd"])
-            else:
-                comparison["summary"][metric]["rwd_avg"] = None
-
-            if comparison["summary"][metric]["synthetic"]:
-                comparison["summary"][metric]["synthetic_avg"] = sum(
-                    comparison["summary"][metric]["synthetic"]
-                ) / len(comparison["summary"][metric]["synthetic"])
-            else:
-                comparison["summary"][metric]["synthetic_avg"] = None
-
-            if comparison["summary"][metric]["difference"]:
-                comparison["summary"][metric]["difference_avg"] = sum(
-                    comparison["summary"][metric]["difference"]
-                ) / len(comparison["summary"][metric]["difference"])
-            else:
-                comparison["summary"][metric]["difference_avg"] = None
-
-    for metric in ["Accuracy", "Precision", "Recall", "F1-Score"]:
-        del comparison["summary"][metric]["rwd"]
-        del comparison["summary"][metric]["synthetic"]
-        del comparison["summary"][metric]["difference"]
 
     return comparison
 

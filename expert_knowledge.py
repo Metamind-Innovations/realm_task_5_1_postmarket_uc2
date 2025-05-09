@@ -155,7 +155,7 @@ def expert_knowledge_evaluation(input_dir):
         input_dir (str): Directory containing VCF files
 
     Returns:
-        dict: Results dictionary containing validation results and summary statistics
+        dict: Results dictionary containing validation results
     """
     vcf_files = glob.glob(os.path.join(input_dir, "*.vcf"))
 
@@ -173,11 +173,6 @@ def expert_knowledge_evaluation(input_dir):
                     "source": "NCBI GRCh38 Assembly",
                 },
             },
-            "summary": {
-                "total_files": len(vcf_files),
-                "positions": {"valid": 0, "invalid": 0},
-                "nucleotides": {"valid": 0, "invalid": 0},
-            },
             "files": {},
         }
 
@@ -187,32 +182,6 @@ def expert_knowledge_evaluation(input_dir):
                 "nucleotide_validation": report_invalid_nucleotides(vcf_file),
             }
             results["files"][os.path.basename(vcf_file)] = file_results
-
-            # Summary statistics
-            if file_results["position_validation"]["is_valid"]:
-                results["summary"]["positions"]["valid"] += 1
-            else:
-                results["summary"]["positions"]["invalid"] += 1
-
-            if file_results["nucleotide_validation"]["is_valid"]:
-                results["summary"]["nucleotides"]["valid"] += 1
-            else:
-                results["summary"]["nucleotides"]["invalid"] += 1
-
-        total_files = results["summary"]["total_files"]
-        if total_files > 0:
-            results["summary"]["positions"]["valid_percentage"] = (
-                results["summary"]["positions"]["valid"] / total_files
-            ) * 100
-            results["summary"]["positions"]["invalid_percentage"] = (
-                results["summary"]["positions"]["invalid"] / total_files
-            ) * 100
-            results["summary"]["nucleotides"]["valid_percentage"] = (
-                results["summary"]["nucleotides"]["valid"] / total_files
-            ) * 100
-            results["summary"]["nucleotides"]["invalid_percentage"] = (
-                results["summary"]["nucleotides"]["invalid"] / total_files
-            ) * 100
 
     return results
 
